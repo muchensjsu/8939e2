@@ -5,6 +5,7 @@ from sqlalchemy.sql.sqltypes import BigInteger, DateTime, Integer, String
 
 from api.database import Base
 
+
 class ProspectsFile(Base):
     """Prospects files table"""
 

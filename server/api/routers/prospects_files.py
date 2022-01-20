@@ -1,4 +1,13 @@
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, BackgroundTasks, Form
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    status,
+    Depends,
+    UploadFile,
+    File,
+    BackgroundTasks,
+    Form,
+)
 from api import schemas
 import aiofiles
 from typing import Optional
@@ -13,10 +22,12 @@ from api.dependencies.auth import get_current_user
 router = APIRouter(prefix="/api", tags=["prospect_files"])
 
 
-@router.post("/prospect_files/import", response_model=schemas.ProspectFileImportResponse)
+@router.post(
+    "/prospect_files/import", response_model=schemas.ProspectFileImportResponse
+)
 async def upload_prospects_file(
-    background_tasks: BackgroundTasks, 
-    file: UploadFile=File(...),
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
     email_index: int = Form(...),
     first_name_index: Optional[int] = Form(-1),
     last_name_index: Optional[int] = Form(-1),
@@ -32,37 +43,51 @@ async def upload_prospects_file(
         )
 
     new_filename = str(uuid.uuid4()) + ".csv"
-    async with aiofiles.open(new_filename, 'wb') as out_file:
+    async with aiofiles.open(new_filename, "wb") as out_file:
         content = await file.read(1024)
-        while content: 
-            await out_file.write(content) 
+        while content:
+            await out_file.write(content)
             content = await file.read(1024)
 
-    with open(new_filename, 'r') as read_obj:
+    total_rows = 0
+    with open(new_filename, "r") as read_obj:
         csv_reader = reader(read_obj)
-        total_rows = 0
-        if has_headers: next(csv_reader)
+        if has_headers:
+            next(csv_reader)
         for _ in csv_reader:
             total_rows += 1
 
-    if (total_rows == 0):
-        raise HTTPException(status_code=400, detail="No data found in the uploaded file")
+    if total_rows == 0:
+        raise HTTPException(
+            status_code=400, detail="No data found in the uploaded file"
+        )
 
-    # create file object and save it to database. 
+    # create file object and save it to database.
     file_in_db = ProspectsFileCrud.create_prospects_file(
-        db, 
+        db,
         {
-            "original_file_name": file.filename, 
-            "saved_file_name": new_filename, 
-            "total_rows": total_rows
-        }
+            "original_file_name": file.filename,
+            "saved_file_name": new_filename,
+            "total_rows": total_rows,
+        },
     )
     background_tasks.add_task(
-        write_prospects, 
-        file_in_db.id, new_filename, email_index, first_name_index, last_name_index, 
-        force, has_headers, current_user, db
-    ) 
-    return {"result": "File upload success. Waiting to be processed.", "file_id": file_in_db.id}
+        write_prospects,
+        file_in_db.id,
+        new_filename,
+        email_index,
+        first_name_index,
+        last_name_index,
+        force,
+        has_headers,
+        current_user,
+        db,
+    )
+    return {
+        "result": "File upload success. Waiting to be processed.",
+        "file_id": file_in_db.id,
+    }
+
 
 def write_prospects(
     file_id: int,
@@ -73,30 +98,35 @@ def write_prospects(
     force,
     has_headers,
     current_user,
-    db
+    db,
 ):
     """Extract prospects from file and insert into database"""
     user_id = current_user.id
     ProspectsFileCrud.update_file_state(db, file_id, "processing")
     try:
-        with open(file, 'r') as read_obj:
+        with open(file, "r") as read_obj:
             csv_reader = reader(read_obj)
-            if has_headers: next(csv_reader)
-            # Iterate over each row 
+            if has_headers:
+                next(csv_reader)
+            # Iterate over each row
             for row in csv_reader:
                 f_name = "" if first_name_index == -1 else row[first_name_index]
                 l_name = "" if last_name_index == -1 else row[last_name_index]
-                prospect_id = ProspectCrud.get_prospect_id_by_email(db, user_id, row[email_index])
+                prospect_id = ProspectCrud.get_prospect_id_by_email(
+                    db, user_id, row[email_index]
+                )
                 prospect = {
-                        "email": row[email_index].lower(),
-                        "first_name": f_name,
-                        "last_name": l_name
-                    }
-                if (prospect_id):
-                    if (force): 
+                    "email": row[email_index].lower(),
+                    "first_name": f_name,
+                    "last_name": l_name,
+                }
+                if prospect_id:
+                    if force:
                         print("updating prospect with id ", prospect_id)
                         # update the prospect with new information
-                        ProspectCrud.update_prospect_by_id(db, prospect_id, data=prospect)
+                        ProspectCrud.update_prospect_by_id(
+                            db, prospect_id, data=prospect
+                        )
                         ProspectsFileCrud.add_one_done(db, file_id)
                 else:
                     ProspectCrud.create_prospect(db, user_id, data=prospect)
@@ -106,12 +136,12 @@ def write_prospects(
     else:
         ProspectsFileCrud.update_file_state(db, file_id, "finished")
 
-@router.get("/prospects_files/{id}/progress", response_model=schemas.ProspectFileProgressResponse)
-def get_file_progress(
-    id: int,
-    db: Session = Depends(get_db)
-):
+
+@router.get(
+    "/prospects_files/{id}/progress",
+    response_model=schemas.ProspectFileProgressResponse,
+)
+def get_file_progress(id: int, db: Session = Depends(get_db)):
     """Check the progress of file"""
     file = ProspectsFileCrud.get_file_by_id(db, id)
     return {"total": file.total_rows, "done": file.done_rows}
-

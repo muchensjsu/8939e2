@@ -28,6 +28,35 @@ class ProspectCrud:
         )
 
     @classmethod
+    def get_prospect_id_by_email(
+        cls,
+        db: Session,
+        user_id: int,
+        email: str
+    ):
+        prospect = ( 
+                db.query(Prospect)
+                .filter(Prospect.user_id == user_id)
+                .filter(Prospect.email == email.lower())
+                .one_or_none()
+        )
+        if (prospect): 
+            return prospect.id
+        else :
+            return None
+
+    @classmethod
+    def update_prospect_by_id(
+        cls,
+        db: Session,
+        prospect_id: int,
+        data
+    ):
+        db.query(Prospect).filter(Prospect.id == prospect_id).update(data, synchronize_session="fetch")
+        db.commit()
+
+
+    @classmethod
     def get_user_prospects_total(cls, db: Session, user_id: int) -> int:
         return db.query(Prospect).filter(Prospect.user_id == user_id).count()
 

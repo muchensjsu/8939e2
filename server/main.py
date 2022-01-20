@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
-from api.routers import auth, users, campaigns, prospects
+from api.routers import auth, users, campaigns, prospects, prospects_files
 
 
 config = dotenv_values(".env")
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(campaigns.router)
 app.include_router(prospects.router)
+app.include_router(prospects_files.router)
 
 
 @app.exception_handler(StarletteHTTPException)

@@ -122,7 +122,6 @@ def write_prospects(
                 }
                 if prospect_id:
                     if force:
-                        print("updating prospect with id ", prospect_id)
                         # update the prospect with new information
                         ProspectCrud.update_prospect_by_id(
                             db, prospect_id, data=prospect

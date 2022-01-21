@@ -9,9 +9,10 @@ class ProspectsFileCrud:
     def create_prospects_file(
         cls,
         db: Session,
+        user_id: int,
         data: schemas.ProspectsFileCreate,
     ) -> ProspectsFile:
-        file = ProspectsFile(**data)
+        file = ProspectsFile(**data, user_id=user_id)
         db.add(file)
         db.commit()
         db.refresh(file)
@@ -28,9 +29,3 @@ class ProspectsFileCrud:
     def get_file_by_id(cls, db: Session, file_id: int) -> Union[ProspectsFile, None]:
         return db.query(ProspectsFile).filter(ProspectsFile.id == file_id).one_or_none()
 
-    @classmethod
-    def add_one_done(cls, db: Session, file_id: int):
-        db.query(ProspectsFile).filter(ProspectsFile.id == file_id).update(
-            {"done_rows": (ProspectsFile.done_rows + 1)}, synchronize_session="fetch"
-        )
-        db.commit()

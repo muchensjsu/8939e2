@@ -7,7 +7,6 @@ class ProspectsFile(BaseModel):
     original_file_name: str
     saved_file_name: str
     total_rows: int
-    done_rows: int
     status: str
     created_at: datetime
 

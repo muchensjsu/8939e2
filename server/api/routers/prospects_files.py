@@ -65,6 +65,7 @@ async def upload_prospects_file(
     # create file object and save it to database.
     file_in_db = ProspectsFileCrud.create_prospects_file(
         db,
+        current_user.id,
         {
             "original_file_name": file.filename,
             "saved_file_name": new_filename,
@@ -109,29 +110,37 @@ def write_prospects(
             if has_headers:
                 next(csv_reader)
             # Iterate over each row
+            new_prospects = set()
+            existing_prospects = set()
             for row in csv_reader:
                 f_name = "" if first_name_index == -1 else row[first_name_index]
                 l_name = "" if last_name_index == -1 else row[last_name_index]
                 prospect_id = ProspectCrud.get_prospect_id_by_email(
                     db, user_id, row[email_index]
                 )
-                prospect = {
-                    "email": row[email_index].lower(),
-                    "first_name": f_name,
-                    "last_name": l_name,
-                }
+                prospect = schemas.ProspectCreate(
+                    email=row[email_index], 
+                    first_name=f_name, 
+                    last_name=l_name, 
+                    file_id=file_id
+                )
                 if prospect_id:
                     if force:
                         # update the prospect with new information
                         ProspectCrud.update_prospect_by_id(
                             db, prospect_id, data=prospect
                         )
-                        ProspectsFileCrud.add_one_done(db, file_id)
                 else:
-                    ProspectCrud.create_prospect(db, user_id, data=prospect)
-                    ProspectsFileCrud.add_one_done(db, file_id)
-    except:
+                    new_prospects.add(prospect)
+                    if (len(new_prospects) < 2):
+                        continue
+                    else:
+                        ProspectCrud.create_prospects(db, user_id, data=new_prospects)
+                        new_prospects = set()
+            ProspectCrud.create_prospects(db, user_id, data=new_prospects)
+    except Exception as e:
         ProspectsFileCrud.update_file_state(db, file_id, "failed")
+        print(e)
     else:
         ProspectsFileCrud.update_file_state(db, file_id, "finished")
 
@@ -140,7 +149,24 @@ def write_prospects(
     "/prospects_files/{id}/progress",
     response_model=schemas.ProspectFileProgressResponse,
 )
-def get_file_progress(id: int, db: Session = Depends(get_db)):
+def get_file_progress(id: int, db: Session = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
     """Check the progress of file"""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Please log in"
+        )
+
     file = ProspectsFileCrud.get_file_by_id(db, id)
-    return {"total": file.total_rows, "done": file.done_rows}
+    if not file:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=f"File with id {id} does not exist",
+        )
+    if (file.user_id != current_user.id):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=f"You do not have access to this file",
+        )
+    done = ProspectCrud.get_file_prospects_done(db, id)
+    return {"total": file.total_rows, "done": done}

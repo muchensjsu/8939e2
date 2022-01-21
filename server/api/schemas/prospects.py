@@ -21,6 +21,10 @@ class ProspectCreate(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
+    file_id: int
+
+    def __hash__(self):
+        return hash(self.email) ^ hash(self.first_name) ^ hash(self.last_name)
 
 
 class ProspectResponse(BaseModel):

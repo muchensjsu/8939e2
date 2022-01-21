@@ -28,7 +28,7 @@ class ProspectCrud:
         )
 
     @classmethod
-    def get_prospect_id_by_email(cls, db: Session, user_id: int, email: str):
+    def get_prospect_id_by_email(cls, db: Session, user_id: int, email: str) -> int:
         prospect = (
             db.query(Prospect)
             .filter(Prospect.user_id == user_id)
@@ -41,9 +41,15 @@ class ProspectCrud:
             return None
 
     @classmethod
-    def update_prospect_by_id(cls, db: Session, prospect_id: int, data):
+    def update_prospect_by_id(cls, db: Session, prospect_id: int, data: schemas.ProspectCreate):
         db.query(Prospect).filter(Prospect.id == prospect_id).update(
-            data, synchronize_session="fetch"
+            {
+                "email": data.email,
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+                "file_id": data.file_id
+            }, 
+            synchronize_session="fetch"
         )
         db.commit()
 
@@ -52,15 +58,42 @@ class ProspectCrud:
         return db.query(Prospect).filter(Prospect.user_id == user_id).count()
 
     @classmethod
+    def get_file_prospects_done(cls, db: Session, file_id: int) -> int:
+        return db.query(Prospect).filter(Prospect.file_id == file_id).count()
+
+    @classmethod
     def create_prospect(
         cls, db: Session, user_id: int, data: schemas.ProspectCreate
     ) -> Prospect:
         """Create a prospect"""
-        prospect = Prospect(**data, user_id=user_id)
+        prospect = Prospect(
+            email=data.email.lower(),
+            first_name=data.first_name,
+            last_name=data.last_name,
+            file_id=data.file_id,
+            user_id=user_id
+        )
         db.add(prospect)
         db.commit()
         db.refresh(prospect)
         return prospect
+
+    @classmethod
+    def create_prospects(
+        cls, db: Session, user_id: int, data: Set[schemas.ProspectCreate]
+    ):
+        inserts = [
+            Prospect(
+                email=prospect.email.lower(),
+                first_name=prospect.first_name,
+                last_name=prospect.last_name,
+                file_id=prospect.file_id,
+                user_id=user_id
+            ) 
+            for prospect in data
+        ]
+        db.add_all(inserts)
+        db.commit()
 
     @classmethod
     def validate_prospect_ids(

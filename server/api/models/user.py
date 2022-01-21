@@ -20,6 +20,7 @@ class User(Base):
 
     prospects = relationship("Prospect", back_populates="user")
     campaigns = relationship("Campaign", back_populates="user")
+    prospects_files = relationship("ProspectsFile", back_populates="user")
 
     def __repr__(self):
         return f"{self.id} | {self.email}"

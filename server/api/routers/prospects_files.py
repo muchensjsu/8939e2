@@ -111,33 +111,44 @@ def write_prospects(
                 next(csv_reader)
             # Iterate over each row
             new_prospects = set()
-            existing_prospects = set()
+            existing_prospects = {}
             for row in csv_reader:
                 f_name = "" if first_name_index == -1 else row[first_name_index]
                 l_name = "" if last_name_index == -1 else row[last_name_index]
                 prospect_id = ProspectCrud.get_prospect_id_by_email(
                     db, user_id, row[email_index]
                 )
-                prospect = schemas.ProspectCreate(
-                    email=row[email_index], 
-                    first_name=f_name, 
-                    last_name=l_name, 
-                    file_id=file_id
-                )
                 if prospect_id:
                     if force:
                         # update the prospect with new information
-                        ProspectCrud.update_prospect_by_id(
-                            db, prospect_id, data=prospect
+                        updated_prospect = schemas.ProspectUpdate(
+                            id=prospect_id,
+                            email=row[email_index].lower(), 
+                            first_name=f_name, 
+                            last_name=l_name, 
+                            file_id=file_id
                         )
+                        existing_prospects[prospect_id] = updated_prospect
+                        if (len(existing_prospects) >= 1000):
+                            ProspectCrud.update_prospects_by_ids(
+                                db, data=existing_prospects
+                            )
+                            existing_prospects = {}
                 else:
+                    prospect = schemas.ProspectCreate(
+                        email=row[email_index].lower(), 
+                        first_name=f_name, 
+                        last_name=l_name, 
+                        file_id=file_id
+                    )
                     new_prospects.add(prospect)
-                    if (len(new_prospects) < 2):
+                    if (len(new_prospects) < 1000):
                         continue
                     else:
                         ProspectCrud.create_prospects(db, user_id, data=new_prospects)
                         new_prospects = set()
             ProspectCrud.create_prospects(db, user_id, data=new_prospects)
+            ProspectCrud.update_prospects_by_ids(db, data=existing_prospects)
     except Exception as e:
         ProspectsFileCrud.update_file_state(db, file_id, "failed")
         print(e)

@@ -24,8 +24,14 @@ class ProspectCreate(BaseModel):
     file_id: int
 
     def __hash__(self):
-        return hash(self.email) ^ hash(self.first_name) ^ hash(self.last_name)
+        return hash(self.email) #^ hash(self.first_name) ^ hash(self.last_name)
 
+class ProspectUpdate(BaseModel):
+    id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    file_id: int
 
 class ProspectResponse(BaseModel):
     """One page of prospects"""

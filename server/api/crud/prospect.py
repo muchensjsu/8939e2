@@ -41,8 +41,8 @@ class ProspectCrud:
             return None
 
     @classmethod
-    def update_prospect_by_id(cls, db: Session, prospect_id: int, data: schemas.ProspectCreate):
-        db.query(Prospect).filter(Prospect.id == prospect_id).update(
+    def update_prospect_by_id(cls, db: Session, data: schemas.ProspectUpdate):
+        db.query(Prospect).filter(Prospect.id == data.id).update(
             {
                 "email": data.email,
                 "first_name": data.first_name,
@@ -51,6 +51,38 @@ class ProspectCrud:
             }, 
             synchronize_session="fetch"
         )
+        db.commit()
+
+    @classmethod
+    def update_prospects_by_ids(cls, db:Session, data: dict):
+        rows = db.query(Prospect).filter(Prospect.id.in_(data))  
+        for row in rows:
+            row.email=data[row.id].email
+            row.first_name=data[row.id].first_name
+            row.last_name=data[row.id].last_name
+            row.file_id=data[row.id].file_id
+        db.commit()
+
+    @classmethod
+    def insert_prospects_by_emails(cls, db:Session, user_id: int, data: dict):
+        rows_need_update = db.query(Prospect).filter(Prospect.email.in_(data)).filter(Prospect.user_id==user_id)
+        for row in rows_need_update:
+            row.email=data[row.email].email
+            row.first_name=data[row.email].first_name
+            row.last_name=data[row.email].last_name
+            row.file_id=data[row.email].file_id
+            del data[row.email]
+        inserts = [
+            Prospect(
+                email=data[k].email,
+                first_name=data[k].first_name,
+                last_name=data[k].last_name,
+                file_id=data[k].file_id,
+                user_id=user_id
+            ) 
+            for k in data
+        ]
+        db.add_all(inserts)
         db.commit()
 
     @classmethod
@@ -82,6 +114,7 @@ class ProspectCrud:
     def create_prospects(
         cls, db: Session, user_id: int, data: Set[schemas.ProspectCreate]
     ):
+        """Create a group of prospects"""
         inserts = [
             Prospect(
                 email=prospect.email.lower(),

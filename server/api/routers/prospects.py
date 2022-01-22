@@ -24,12 +24,4 @@ def get_prospects_page(
     prospects = ProspectCrud.get_users_prospects(db, current_user.id, page, page_size)
     total = ProspectCrud.get_user_prospects_total(db, current_user.id)
     return {"prospects": prospects, "size": len(prospects), "total": total}
-
-@router.post("/add/prospect")
-def add_prospect(
-    data: schemas.ProspectCreate,
-    db: Session=Depends(get_db),
-    current_user: schemas.User = Depends(get_current_user)
-):
-    prospect = ProspectCrud.create_prospect(db, current_user.id, data)
-    return {"prospect": prospect}
+    

@@ -28,4 +28,3 @@ class ProspectsFileCrud:
     @classmethod
     def get_file_by_id(cls, db: Session, file_id: int) -> Union[ProspectsFile, None]:
         return db.query(ProspectsFile).filter(ProspectsFile.id == file_id).one_or_none()
-

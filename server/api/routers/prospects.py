@@ -24,4 +24,3 @@ def get_prospects_page(
     prospects = ProspectCrud.get_users_prospects(db, current_user.id, page, page_size)
     total = ProspectCrud.get_user_prospects_total(db, current_user.id)
     return {"prospects": prospects, "size": len(prospects), "total": total}
-    

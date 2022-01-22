@@ -8,6 +8,7 @@ from fastapi import (
     BackgroundTasks,
     Form,
 )
+from pydantic import ValidationError
 from api import schemas
 import aiofiles
 from typing import Optional
@@ -115,22 +116,25 @@ def write_prospects(
                 f_name = "" if first_name_index == -1 else row[first_name_index]
                 l_name = "" if last_name_index == -1 else row[last_name_index]
                 prospect = schemas.ProspectCreate(
-                    email=row[email_index].lower(), 
-                    first_name=f_name, 
-                    last_name=l_name, 
-                    file_id=file_id
+                    email=row[email_index].lower(),
+                    first_name=f_name,
+                    last_name=l_name,
+                    file_id=file_id,
                 )
                 prospects_to_be_processed[prospect.email] = prospect
-                if (len(prospects_to_be_processed) >= 1000):
-                    ProspectCrud.add_prospects_by_emails(db, user_id, prospects_to_be_processed, force)
+                if len(prospects_to_be_processed) >= 1000:
+                    ProspectCrud.add_prospects_by_emails(
+                        db, user_id, prospects_to_be_processed, force
+                    )
                     prospects_to_be_processed = {}
 
-            if (len(prospects_to_be_processed) > 0):       
-                ProspectCrud.add_prospects_by_emails(db, user_id, prospects_to_be_processed, force)   
+            if len(prospects_to_be_processed) > 0:
+                ProspectCrud.add_prospects_by_emails(
+                    db, user_id, prospects_to_be_processed, force
+                )
 
-    except Exception as e:
+    except ValidationError:
         ProspectsFileCrud.update_file_state(db, file_id, "failed")
-        print(e)
     else:
         ProspectsFileCrud.update_file_state(db, file_id, "finished")
 
@@ -139,12 +143,15 @@ def write_prospects(
     "/prospects_files/{id}/progress",
     response_model=schemas.ProspectFileProgressResponse,
 )
-def get_file_progress(id: int, db: Session = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
+def get_file_progress(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(get_current_user),
+):
     """Check the progress of file"""
     if not current_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Please log in"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Please log in"
         )
 
     file = ProspectsFileCrud.get_file_by_id(db, id)
@@ -153,7 +160,7 @@ def get_file_progress(id: int, db: Session = Depends(get_db), current_user: sche
             status.HTTP_404_NOT_FOUND,
             detail=f"File with id {id} does not exist",
         )
-    if (file.user_id != current_user.id):
+    if file.user_id != current_user.id:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             detail=f"You do not have access to this file",

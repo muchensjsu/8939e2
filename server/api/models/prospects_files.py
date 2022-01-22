@@ -18,7 +18,9 @@ class ProspectsFile(Base):
     status = Column(String, nullable=False, server_default="created")
     user_id = Column(BigInteger, ForeignKey("users.id"), primary_key=True)
 
-    user = relationship("User", back_populates="prospects_files", foreign_keys=[user_id])
+    user = relationship(
+        "User", back_populates="prospects_files", foreign_keys=[user_id]
+    )
     prospects = relationship("Prospect", back_populates="prospects_file")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

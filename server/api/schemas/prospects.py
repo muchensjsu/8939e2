@@ -23,6 +23,7 @@ class ProspectCreate(BaseModel):
     last_name: str
     file_id: int
 
+
 class ProspectResponse(BaseModel):
     """One page of prospects"""
 

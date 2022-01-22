@@ -28,13 +28,19 @@ class ProspectCrud:
         )
 
     @classmethod
-    def add_prospects_by_emails(cls, db:Session, user_id: int, data: dict, force: bool):
-        rows_need_update = db.query(Prospect).filter(Prospect.email.in_(data)).filter(Prospect.user_id==user_id)
+    def add_prospects_by_emails(
+        cls, db: Session, user_id: int, data: dict, force: bool
+    ):
+        rows_need_update = (
+            db.query(Prospect)
+            .filter(Prospect.email.in_(data))
+            .filter(Prospect.user_id == user_id)
+        )
         if force:
             for row in rows_need_update:
-                row.first_name=data[row.email].first_name
-                row.last_name=data[row.email].last_name
-                row.file_id=data[row.email].file_id
+                row.first_name = data[row.email].first_name
+                row.last_name = data[row.email].last_name
+                row.file_id = data[row.email].file_id
         for row in rows_need_update:
             del data[row.email]
         inserts = [
@@ -43,8 +49,8 @@ class ProspectCrud:
                 first_name=data[k].first_name,
                 last_name=data[k].last_name,
                 file_id=data[k].file_id,
-                user_id=user_id
-            ) 
+                user_id=user_id,
+            )
             for k in data
         ]
         db.add_all(inserts)
@@ -68,7 +74,7 @@ class ProspectCrud:
             first_name=data.first_name,
             last_name=data.last_name,
             file_id=data.file_id,
-            user_id=user_id
+            user_id=user_id,
         )
         db.add(prospect)
         db.commit()

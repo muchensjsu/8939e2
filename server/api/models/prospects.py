@@ -1,7 +1,7 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey
-from sqlalchemy.sql.sqltypes import BigInteger, DateTime, Integer, String 
+from sqlalchemy.sql.sqltypes import BigInteger, DateTime, Integer, String
 
 from api.database import Base
 
@@ -19,7 +19,9 @@ class Prospect(Base):
     user_id = Column(BigInteger, ForeignKey("users.id"), primary_key=True)
 
     user = relationship("User", back_populates="prospects", foreign_keys=[user_id])
-    prospects_file = relationship("ProspectsFile", back_populates="prospects", foreign_keys=[file_id])
+    prospects_file = relationship(
+        "ProspectsFile", back_populates="prospects", foreign_keys=[file_id]
+    )
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())

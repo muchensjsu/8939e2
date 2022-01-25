@@ -21,6 +21,7 @@ class ProspectCreate(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
+    file_id: int
 
 
 class ProspectResponse(BaseModel):
